@@ -22,13 +22,19 @@ st.subheader("Pertanyaan 1: Seasonal Trends in Bike Rentals (Casual and Register
 
 # Visualization for Seasonal Trends
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.barplot(x='season', y='casual', data=day_df_clean, ci=None, label='Casual Users', color='orange', ax=ax)
-sns.barplot(x='season', y='registered', data=day_df_clean, ci=None, label='Registered Users', color='blue', ax=ax)
-ax.set_title("Tren Pengguna Sepeda (Kasual dan Terdaftar) di Setiap Musim")
-ax.set_xlabel("Musim (1: Spring, 2: Summer, 3: Fall, 4: Winter)")
-ax.set_ylabel("Jumlah Pengguna Sepeda")
+# Group data by season and calculate mean values for casual and registered users
+seasonal_means = day_df_clean.groupby('season')[['casual', 'registered']].mean().reset_index()
+
+# Plot side-by-side bar plot for casual and registered users
+sns.barplot(x='season', y='casual', data=seasonal_means, label='Casual Users', color='orange', alpha=0.7)
+sns.barplot(x='season', y='registered', data=seasonal_means, label='Registered Users', color='red', alpha=0.7)
+
+ax.set_title("Tren Pengguna Sepeda (Kasual dan Terdaftar) di Setiap Musim", fontsize=14)
+ax.set_xlabel("Musim (1: Spring, 2: Summer, 3: Fall, 4: Winter)", fontsize=12)
+ax.set_ylabel("Rata-rata Jumlah Pengguna Sepeda", fontsize=12)
 ax.legend()
 st.pyplot(fig)
+
 
 st.markdown("""
 **Insight**:
