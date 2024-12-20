@@ -6,16 +6,35 @@ import seaborn as sns
 # Load the cleaned dataset (ensure these files are available)
 day_df_clean = pd.read_csv('..\data\day_clean.csv')
 
+# Memuat data
+@st.cache_data  # Perbarui dekorator caching
+def load_data():
+    data = pd.read_csv('..\data\day_clean.csv')  # Ganti dengan path yang sesuai jika perlu
+    return data
+
+# Memanggil fungsi untuk memuat data
+data = load_data()
+
 # Set up the Streamlit dashboard
 st.title("Bike Sharing Data Dashboard")
 
 # Introduction
-st.header("Exploratory Data Analysis of Bike Sharing Data")
 st.markdown("""
 This dashboard explores two key questions:
 1. **Bagaimana tren jumlah pengguna sepeda (baik kasual maupun terdaftar) di setiap musim?**
 2. **Bagaimana pengaruh faktor cuaca (suhu, kelembapan, dan kecepatan angin) terhadap jumlah total pengguna sepeda?**
 """)
+
+
+st.sidebar.header("Side Bar")
+season_options = ['All Seasons'] + data['season'].unique().tolist()
+season_filter = st.sidebar.selectbox("Pilih Musim:", options=season_options)
+
+
+if season_filter == 'All Seasons':
+    filtered_data = data
+else:
+    filtered_data = data[data['season'] == season_filter]
 
 # Pertanyaan 1: Seasonal Trends for Casual and Registered Users
 st.subheader("Pertanyaan 1: tren jumlah pengguna sepeda (baik kasual maupun terdaftar) di setiap musim")
@@ -23,7 +42,7 @@ st.subheader("Pertanyaan 1: tren jumlah pengguna sepeda (baik kasual maupun terd
 # Visualization for Seasonal Trends
 fig, ax = plt.subplots(figsize=(12, 6))
 # Group data by season and calculate mean values for casual and registered users
-seasonal_means = day_df_clean.groupby('season')[['casual', 'registered']].mean().reset_index()
+seasonal_means = filtered_data.groupby('season')[['casual', 'registered']].mean().reset_index()
 
 # Plot side-by-side bar plot for casual and registered users
 sns.barplot(x='season', y='casual', data=seasonal_means, label='Casual Users', color='blue', alpha=0.7)
@@ -51,7 +70,7 @@ st.subheader("Pertanyaan 2: pengaruh faktor cuaca terhadap jumlah total pengguna
 # Visualization for Temperature vs Total Users
 st.markdown("### Pengaruh Suhu terhadap Jumlah Total Pengguna Sepeda")
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='temp', y='cnt', data=day_df_clean, color='red', ax=ax)
+sns.scatterplot(x='temp', y='cnt', data=data, color='red', ax=ax)
 ax.set_title("Pengaruh Suhu terhadap Jumlah Total Pengguna Sepeda")
 ax.set_xlabel("Suhu (Skala Ternormalisasi)")
 ax.set_ylabel("Jumlah Total Pengguna Sepeda")
@@ -65,7 +84,7 @@ st.markdown("""
 # Visualization for Humidity vs Total Users
 st.markdown("### Pengaruh Kelembapan terhadap Jumlah Total Pengguna Sepeda")
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='hum', y='cnt', data=day_df_clean, color='blue', ax=ax)
+sns.scatterplot(x='hum', y='cnt', data=data, color='blue', ax=ax)
 ax.set_title("Pengaruh Kelembapan terhadap Jumlah Total Pengguna Sepeda")
 ax.set_xlabel("Kelembapan (Skala Ternormalisasi)")
 ax.set_ylabel("Jumlah Total Pengguna Sepeda")
@@ -79,7 +98,7 @@ st.markdown("""
 # Visualization for Windspeed vs Total Users
 st.markdown("### Pengaruh Kecepatan Angin terhadap Jumlah Total Pengguna Sepeda")
 fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='windspeed', y='cnt', data=day_df_clean, color='green', ax=ax)
+sns.scatterplot(x='windspeed', y='cnt', data=data, color='green', ax=ax)
 ax.set_title("Pengaruh Kecepatan Angin terhadap Jumlah Total Pengguna Sepeda")
 ax.set_xlabel("Kecepatan Angin (Skala Ternormalisasi)")
 ax.set_ylabel("Jumlah Total Pengguna Sepeda")
