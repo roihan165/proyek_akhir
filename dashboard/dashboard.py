@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load the cleaned dataset (ensure these files are available)
-day_df_clean = pd.read_csv('..\data\day_clean.csv')
+hour_df_clean = pd.read_csv('..\data\hour_clean.csv')
 
 # Memuat data
 @st.cache_data  # Perbarui dekorator caching
@@ -21,97 +21,113 @@ st.title("Bike Sharing Data Dashboard")
 # Introduction
 st.markdown("""
 This dashboard explores two key questions:
-1. **Bagaimana tren jumlah pengguna sepeda (baik kasual maupun terdaftar) di setiap musim?**
+1. **Bagaimana tren jumlah pengguna sepeda di setiap musim per tahun?**
 2. **Bagaimana pengaruh faktor cuaca (suhu, kelembapan, dan kecepatan angin) terhadap jumlah total pengguna sepeda?**
 """)
 
-
-st.sidebar.header("Side Bar")
-season_options = ['All Seasons'] + data['season'].unique().tolist()
-season_filter = st.sidebar.selectbox("Pilih Musim:", options=season_options)
+year_mapping = {0: '2011', 1: '2012'}
 
 
-if season_filter == 'All Seasons':
-    filtered_data = data
-else:
-    filtered_data = data[data['season'] == season_filter]
+# User input for selecting years to display
+years = st.multiselect(
+    "Pilih Tahun:",
+    options=[0, 1],  # Assuming 0 is for 2011 and 1 is for 2012 (as per your data)
+    format_func=lambda x:year_mapping[x],
+    default=[0,1]
+)
 
-# Pertanyaan 1: Seasonal Trends for Casual and Registered Users
-st.subheader("Pertanyaan 1: tren jumlah pengguna sepeda (baik kasual maupun terdaftar) di setiap musim")
+# Create a pivot table for the data
+pivot_df = data.pivot_table(index='season', columns='yr', values='cnt', aggfunc='sum')
+# Filter the pivot table based on selected years
+pivot_df_filtered = pivot_df[years]
 
-# Visualization for Seasonal Trends
+# Create a side-by-side bar plot for the selected years
+
+# Streamlit Title
+st.title("Tren Pengguna Sepeda Berdasarkan Musim dan Tahun")
+
+# Display a description or any introductory text
+st.write("""
+Visualisasi di bawah ini menunjukkan tren penggunaan sepeda berdasarkan musim dan tahun.
+Dua tahun yang dibandingkan adalah 2011 (yr=0) dan 2012 (yr=1), dengan data musim yang mencakup Winter, Summer, Fall, dan Spring.
+""")
+
+# Create a side-by-side bar plot for the selected years
 fig, ax = plt.subplots(figsize=(12, 6))
-# Group data by season and calculate mean values for casual and registered users
-seasonal_means = filtered_data.groupby('season')[['casual', 'registered']].mean().reset_index()
+pivot_df_filtered.plot(kind='bar', ax=ax, alpha=0.7, width=0.8)
 
-# Plot side-by-side bar plot for casual and registered users
-sns.barplot(x='season', y='casual', data=seasonal_means, label='Casual Users', color='blue', alpha=0.7)
-sns.barplot(x='season', y='registered', data=seasonal_means, label='Registered Users', color='red', alpha=0.7)
-
-ax.set_title("Tren Pengguna Sepeda (Kasual dan Terdaftar) di Setiap Musim", fontsize=14)
+# Customize the plot
+ax.set_title("Tren Pengguna Sepeda Berdasarkan Musim dan Tahun", fontsize=14)
 ax.set_xlabel("Musim (1: Winter, 2: Summer, 3: Fall, 4: Spring)", fontsize=12)
-ax.set_ylabel("Rata-rata Jumlah Pengguna Sepeda", fontsize=12)
-ax.legend()
+ax.set_ylabel("Total Pengguna Sepeda", fontsize=12)
+ax.set_xticks(range(len(pivot_df_filtered.index)))  # Ensure the x-axis labels are horizontal
+ax.set_xticklabels(pivot_df_filtered.index, rotation=0)
+ax.legend([f"{2011 if year == 0 else 2012} (yr={year})" for year in years], title="Tahun", fontsize=10)
+ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+# Display the plot in Streamlit
 st.pyplot(fig)
 
 
 st.markdown("""
 **Insight**:
-- Tren Musiman Pengguna Kasual dan Terdaftar:
-Dari grafik, kita bisa melihat bahwa baik pengguna kasual maupun pengguna terdaftar lebih banyak menggunakan sepeda selama musim panas (summer) dan gugur (fall). Penggunaan sepeda paling rendah terjadi pada musim dingin (winter).
-- Pengguna terdaftar lebih stabil sepanjang musim, tetapi ada penurunan pada musim dingin.
-- Pengguna kasual menunjukkan fluktuasi yang lebih besar, dengan lonjakan penggunaan pada musim panas dan penurunan tajam di musim dingin.
-- Interpretasi: Ini menunjukkan bahwa pengguna terdaftar cenderung lebih sering menggunakan sepeda terlepas dari musim, mungkin untuk bekerja atau keperluan sehari-hari, sementara pengguna kasual lebih dipengaruhi oleh cuaca atau kegiatan rekreasi.
+- Tren Musiman Tahun 2011 dan 2012: Dari grafik, kita bisa melihat bahwa baik tahun 2011 maupun tahun 2012 pengguna lebih banyak menggunakan sepeda selama musim panas (summer) dan gugur (fall). Penggunaan sepeda paling rendah terjadi pada musim dingin (winter)
+- Serta Kita dapat melihat peningkatan jumlah rental pada tahun 2012 dari tahun sebelumnya
 """)
 
 # Pertanyaan 2: Effect of Weather Factors on Total Bike Rentals
-st.subheader("Pertanyaan 2: pengaruh faktor cuaca terhadap jumlah total pengguna sepeda")
+weather_factors = ['temp', 'hum', 'windspeed', 'cnt']
+correlation_matrix = hour_df_clean[weather_factors].corr()
 
-# Visualization for Temperature vs Total Users
-st.markdown("### Pengaruh Suhu terhadap Jumlah Total Pengguna Sepeda")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='temp', y='cnt', data=data, color='red', ax=ax)
-ax.set_title("Pengaruh Suhu terhadap Jumlah Total Pengguna Sepeda")
-ax.set_xlabel("Suhu (Skala Ternormalisasi)")
-ax.set_ylabel("Jumlah Total Pengguna Sepeda")
-st.pyplot(fig)
+# Streamlit Title
+st.title("Korelasi Faktor Cuaca terhadap Pengguna Sepeda")
 
-st.markdown("""
-**Insight**:
-- Plot ini menunjukkan korelasi positif: seiring meningkatnya suhu, jumlah pengguna sepeda juga meningkat hingga mencapai titik tertentu (sekitar 0.6–0.7 dalam skala ternormalisasi). Setelah titik ini, tren tampak mendatar atau sedikit menurun.
-""")
+# Display the correlation matrix heatmap
+st.write("### Matriks Korelasi: Faktor Cuaca dan Total Pengguna Sepeda")
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5)
 
-# Visualization for Humidity vs Total Users
-st.markdown("### Pengaruh Kelembapan terhadap Jumlah Total Pengguna Sepeda")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='hum', y='cnt', data=data, color='blue', ax=ax)
-ax.set_title("Pengaruh Kelembapan terhadap Jumlah Total Pengguna Sepeda")
-ax.set_xlabel("Kelembapan (Skala Ternormalisasi)")
-ax.set_ylabel("Jumlah Total Pengguna Sepeda")
-st.pyplot(fig)
+# Add titles and labels
+plt.title("Correlation Matrix: Weather Factors and Total Users", fontsize=14)
+plt.xlabel("Variables", fontsize=12)
+plt.ylabel("Variables", fontsize=12)
 
-st.markdown("""
-**Insight**:
-- Data menunjukkan tren sedikit menurun: kelembapan yang lebih tinggi tampaknya mengurangi jumlah pengguna sepeda. Sebagian besar jumlah pengguna yang tinggi terkonsentrasi pada tingkat kelembapan sedang (0.4 - 0.7).
-""")
+# Display the heatmap in Streamlit
+st.pyplot(plt)
 
-# Visualization for Windspeed vs Total Users
-st.markdown("### Pengaruh Kecepatan Angin terhadap Jumlah Total Pengguna Sepeda")
-fig, ax = plt.subplots(figsize=(12, 6))
-sns.scatterplot(x='windspeed', y='cnt', data=data, color='green', ax=ax)
-ax.set_title("Pengaruh Kecepatan Angin terhadap Jumlah Total Pengguna Sepeda")
-ax.set_xlabel("Kecepatan Angin (Skala Ternormalisasi)")
-ax.set_ylabel("Jumlah Total Pengguna Sepeda")
-st.pyplot(fig)
+# Bar Graph for correlations with 'cnt'
+correlations = correlation_matrix['cnt'].drop('cnt')
+
+# Plot the bar graph
+st.write("### Korelasi Faktor Cuaca terhadap Total Pengguna Sepeda")
+plt.figure(figsize=(8, 6))
+correlations.plot(kind='bar', color=['red', 'blue', 'green'], alpha=0.8)
+
+# Add titles and labels
+plt.title("Korelasi Faktor Cuaca terhadap Total Pengguna Sepeda", fontsize=14)
+plt.xlabel("Faktor Cuaca", fontsize=12)
+plt.ylabel("Koefisien Korelasi", fontsize=12)
+plt.xticks(rotation=0)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+# Display the bar graph in Streamlit
+st.pyplot(plt)
 
 st.markdown("""
 **Insight**:
-- Titik data tampak tersebar tanpa pola yang jelas, menunjukkan bahwa tidak ada korelasi yang signifikan antara kecepatan angin dan jumlah pengguna sepeda.
-""")
+- - Suhu (temp):
 
+Memiliki korelasi yang kuat dengan total pengguna sepeda, menunjukkan pengaruh yang signifikan.
+- Kelembapan (hum):
+
+Korelasi negatif menunjukkan bahwa kelembapan yang lebih tinggi cenderung mengurangi penggunaan sepeda
+- Kecepatan Angin (windspeed):
+
+Korelasi positif yang lemah menunjukkan pengaruh yang lebih kecil terhadap penggunaan sepeda.
+""")
 # Final summary
 st.subheader("Kesimpulan")
 st.markdown("""
-1. **Pertanyaan 1**: Musim dan cuaca adalah dua faktor penting yang mempengaruhi pola penggunaan sepeda. Di musim panas dan gugur, Jadi langkah yang bisa dilakukan adalah operator perlu mempersiapkan lebih banyak sepeda, sementara di musim dingin bisa dilakukan strategi untuk menjaga atau meningkatkan minat pengguna atau dengan mengurangi jumlah sepada yang direntalkan.
-2. **Pertanyaan 2**: Cuaca, terutama suhu, memiliki pengaruh besar terhadap jumlah rental sepeda. Dengan menggunakan prediksi cuaca dan menyesuaikan distribusi sepeda serta strategi promosi, operator dapat memaksimalkan keuntungan dan efisiensi layanan sepanjang tahun. jadi langkah yang bisa dilakukan adalah Fokus pada promosi aktivitas bersepeda selama rentang suhu sedang (kondisi yang optimal untuk kenyamanan pengguna).Kurangi dampak negatif kelembapan dengan menyediakan tips atau infrastruktur pendukung (misalnya, area teduh, stasiun air minum).
+1. **Pertanyaan 1**: Musim adalah faktor penting yang mempengaruhi pola penggunaan sepeda setiap tahun. Di musim panas dan gugur, Jadi langkah yang bisa dilakukan adalah operator perlu mempersiapkan lebih banyak sepeda, sementara di musim dingin bisa dilakukan strategi untuk menjaga atau meningkatkan minat pengguna atau dengan mengurangi jumlah sepada yang direntalkan.
+2. **Pertanyaan 2**: Cuaca, terutama suhu, memiliki pengaruh besar terhadap jumlah rental sepeda. Operator dapat memaksimalkan keuntungan dan efisiensi layanan, jadi langkah yang bisa dilakukan adalah Fokus pada promosi aktivitas bersepeda selama rentang suhu sedang (kondisi yang optimal untuk kenyamanan pengguna).Kurangi dampak negatif kelembapan dengan menyediakan tips atau infrastruktur pendukung (misalnya, area teduh, stasiun air minum).
 """)
