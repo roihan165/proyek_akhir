@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load the cleaned dataset (ensure these files are available)
-hour_df_clean = pd.read_csv('..\data\hour_clean.csv')
+hour_df_clean = pd.read_csv('data\hour_clean.csv')
 
 # Memuat data
 @st.cache_data  # Perbarui dekorator caching
 def load_data():
-    data = pd.read_csv('..\data\day_clean.csv')  # Ganti dengan path yang sesuai jika perlu
+    data = pd.read_csv('data\day_clean.csv')  # Ganti dengan path yang sesuai jika perlu
     return data
 
 # Memanggil fungsi untuk memuat data
@@ -21,7 +21,7 @@ st.title("Bike Sharing Data Dashboard")
 # Introduction
 st.markdown("""
 This dashboard explores two key questions:
-1. **Bagaimana tren jumlah pengguna sepeda di setiap musim per tahun?**
+1. **Bagaimana tren jumlah pengguna sepeda di setiap musim pada tahun 2011-2012?**
 2. **Bagaimana pengaruh faktor cuaca (suhu, kelembapan, dan kecepatan angin) terhadap jumlah total pengguna sepeda?**
 """)
 
@@ -51,29 +51,33 @@ st.write("""
 Visualisasi di bawah ini menunjukkan tren penggunaan sepeda berdasarkan musim dan tahun.
 Dua tahun yang dibandingkan adalah 2011 (yr=0) dan 2012 (yr=1), dengan data musim yang mencakup Winter, Summer, Fall, dan Spring.
 """)
+try:
+    # Create a side-by-side bar plot for the selected years
+    fig, ax = plt.subplots(figsize=(12, 6))
+    pivot_df_filtered.plot(kind='bar', ax=ax, alpha=0.7, width=0.8)
 
-# Create a side-by-side bar plot for the selected years
-fig, ax = plt.subplots(figsize=(12, 6))
-pivot_df_filtered.plot(kind='bar', ax=ax, alpha=0.7, width=0.8)
+    # Customize the plot
+    ax.set_title("Tren Pengguna Sepeda Berdasarkan Musim dan Tahun", fontsize=14)
+    ax.set_xlabel("Musim (1: Winter, 2: Summer, 3: Fall, 4: Spring)", fontsize=12)
+    ax.set_ylabel("Total Pengguna Sepeda", fontsize=12)
+    ax.set_xticks(range(len(pivot_df_filtered.index)))  # Ensure the x-axis labels are horizontal
+    ax.set_xticklabels(pivot_df_filtered.index, rotation=0)
+    ax.legend([f"{2011 if year == 0 else 2012} (yr={year})" for year in years], title="Tahun", fontsize=10)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
 
-# Customize the plot
-ax.set_title("Tren Pengguna Sepeda Berdasarkan Musim dan Tahun", fontsize=14)
-ax.set_xlabel("Musim (1: Winter, 2: Summer, 3: Fall, 4: Spring)", fontsize=12)
-ax.set_ylabel("Total Pengguna Sepeda", fontsize=12)
-ax.set_xticks(range(len(pivot_df_filtered.index)))  # Ensure the x-axis labels are horizontal
-ax.set_xticklabels(pivot_df_filtered.index, rotation=0)
-ax.legend([f"{2011 if year == 0 else 2012} (yr={year})" for year in years], title="Tahun", fontsize=10)
-ax.grid(axis='y', linestyle='--', alpha=0.7)
+    # Display the plot in Streamlit
+    st.pyplot(fig)
+    
+    st.markdown("""
+    **Insight**:
+    - Tren Musiman Tahun 2011 dan 2012: Dari grafik, kita bisa melihat bahwa baik tahun 2011 maupun tahun 2012 pengguna lebih banyak menggunakan sepeda selama musim panas (summer) dan gugur (fall). Penggunaan sepeda paling rendah terjadi pada musim dingin (winter)
+    - Serta Kita dapat melihat peningkatan jumlah rental pada tahun 2012 dari tahun sebelumnya
+    """)
+except TypeError:
+    st.title("Error Handling:")
+    st.markdown("You must be Choose One Year")
 
-# Display the plot in Streamlit
-st.pyplot(fig)
 
-
-st.markdown("""
-**Insight**:
-- Tren Musiman Tahun 2011 dan 2012: Dari grafik, kita bisa melihat bahwa baik tahun 2011 maupun tahun 2012 pengguna lebih banyak menggunakan sepeda selama musim panas (summer) dan gugur (fall). Penggunaan sepeda paling rendah terjadi pada musim dingin (winter)
-- Serta Kita dapat melihat peningkatan jumlah rental pada tahun 2012 dari tahun sebelumnya
-""")
 
 # Pertanyaan 2: Effect of Weather Factors on Total Bike Rentals
 weather_factors = ['temp', 'hum', 'windspeed', 'cnt']
